@@ -18,7 +18,7 @@ To integrate this library into your project, you can add it via Swift Package Ma
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/cacich0/Deep.git", from: "1.0.0")
+    .package(url: "https://github.com/cacich0/Deep.git", from: "1.1.0")
 ],
 targets: [
     .target(
@@ -34,7 +34,7 @@ targets: [
 #### Creating Deep
 Deep is the main thing of the whole library, it represents the entity to which all the containers you need will be added.
 
-DI.swift
+`DI.swift`
 ```swift
 import Deep
 
@@ -49,7 +49,7 @@ let deep = DI(childrens: \.network, \.others, \.usecase)
 You should override the setup method inside Deep and add the required containers, but before that you should create keys for those containers.
 
 #### Key creation
-ContainerKeys.swift
+`ContainerKeys.swift`
 ```swift
 import Deep
 
@@ -92,7 +92,7 @@ Container(\.network) {
 }
 ```
 How to use added dependencies to add a new dependency.
-So you can call the add method to use _Resolver_. Note, if you want to use other containers inside your container you can do so using the _withDependency_ method, in which case the add method **must be called after it**.
+So you can call the add method to use `Resolver`. Note, if you want to use other containers inside your container you can do so using the `withDependency` method, in which case the add method **must be called after it**.
 ```swift
 Container(\.usecase)
     .withContainers(\.network)
@@ -101,17 +101,34 @@ Container(\.usecase)
         GetSearchUseCase(network: resolver.get(NetworkService.self)!)
     }
 ```
+You can also use `WithLazy` for lazy registration if you want your object to be initialized while the object is being accessed. `Lazy` does the same thing, but you have to wrap your objects that you use inside `WithInterface` and `WithIdentifier` in it.
+
+_Note_: Use this only if you don't need to initialize the object immediately.
+```swift
+Container(\.network) {
+    WithInterface(
+        Lazy(Networker()),
+            interface: NetworkService.self
+        )
+    WithLazy(DataLoader(), type: DataLoader.self)
+    WithIdentifier(
+        identifier: "NetworkerSecond",
+        instance: Lazy(NetworkerSecond()),
+        interface: NetworkService.self
+    )
+}
+```
 
 #### Property Wrappers
 ##### @Resolvers
-Use the _@Resolvers_ property wrapper to inject a resolver for a specific container key:
+Use the `@Resolvers` property wrapper to inject a resolver for a specific container key:
 ```swift
 @Resolvers(\.network) var networkResolver: Resolver!
 
 networkResolver.get(AccountService.self)?.get()
 ```
 ##### @Injection
-Use the _@Injection_ property wrapper to access the main Deep instance for global dependency resolution:
+Use the `@Injection` property wrapper to access the main Deep instance for global dependency resolution:
 ```swift
 @Injection var deep: Deep!
 

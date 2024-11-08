@@ -46,7 +46,10 @@ import Foundation
 ///
 public class Container {
     
-    private var services: [ObjectIdentifier: Any] = [:]
+    typealias Identifier = String
+    
+    private var services: [Identifier: Any] = [:]
+    private var factories: [Identifier: () -> Any] = [:]
     private var childContainers: Set<ContainerKey> = []
     
     /// Initializes a container that creates dependencies
@@ -157,10 +160,9 @@ extension Container: Resolver {
     /// - Returns: An object of the specified type, if found; otherwise `nil`.
     public func get<T>(_ type: T.Type, identifier: String?) -> T? {
         if let identifier {
-            guard let objectIdentifier = Storage.default.customIdentifiers[identifier] else { return nil }
-            return get(identifier: objectIdentifier, type: type)
+            return get(identifier: identifier, type: type)
         }
-        return get(identifier: ObjectIdentifier(type), type: type)
+        return get(identifier: "\(type.self)", type: type)
     }
     
     /// Retrieves a registered component by its type.
@@ -175,8 +177,12 @@ extension Container: Resolver {
 }
 
 extension Container {
-    func register(_ type: Any.Type, instance: Any, id: ObjectIdentifier? = nil) {
-        services[id ?? ObjectIdentifier(type)] = instance
+    func register(_ type: Any.Type, instance: Any, id: Identifier? = nil) {
+        if let lazy = instance as? Lazy {
+            factories[id ?? "\(type.self)"] = lazy.block
+        } else {
+            services[id ?? "\(type.self)"] = instance
+        }
     }
     
     func registerComponents(_ components: [Any]) {
@@ -187,13 +193,17 @@ extension Container {
                     instance: withInterface.instance
                 )
             } else if let withIdentifier = component as? WithIdentifier {
-                let customObjectIdentifier = CustomObjectIdentifier(id: withIdentifier.identifier)
-                let identifier = customObjectIdentifier.objectIdentifier
-                Storage.default.customIdentifiers[withIdentifier.identifier] = identifier
+                let identifier = withIdentifier.identifier
                 register(
                     withIdentifier.interface ?? type(of: component),
                     instance: withIdentifier.instance,
                     id: identifier
+                )
+            } else if let withLazy = component as? WithLazy {
+                let type = withLazy.type
+                register(
+                    type,
+                    instance: withLazy.lazy
                 )
             } else {
                 let objectType = type(of: component)
@@ -216,8 +226,14 @@ extension Container {
         return self
     }
     
-    func get<T>(identifier: ObjectIdentifier, type: T.Type) -> T? {
+    func get<T>(identifier: Identifier, type: T.Type) -> T? {
         guard let object = services[identifier] as? T else {
+            
+            if let factory = factories[identifier], let service = factory() as? T {
+                services[identifier] = service
+                return service
+            }
+            
             for childContainer in childContainers {
                 if let object = Storage.default.attachedContainers[childContainer]?.get(identifier: identifier, type: type) {
                     return object
