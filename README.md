@@ -108,8 +108,8 @@ _Note_: Use this only if you don't need to initialize the object immediately.
 Container(\.network) {
     WithInterface(
         Lazy(Networker()),
-            interface: NetworkService.self
-        )
+        interface: NetworkService.self
+    )
     WithLazy(DataLoader(), type: DataLoader.self)
     WithIdentifier(
         identifier: "NetworkerSecond",
