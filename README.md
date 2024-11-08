@@ -18,7 +18,7 @@ To integrate this library into your project, you can add it via Swift Package Ma
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/cacich0/Deep.git", from: "1.0.0")
+    .package(url: "https://github.com/cacich0/Deep.git", from: "1.1.0")
 ],
 targets: [
     .target(
